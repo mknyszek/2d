@@ -1,7 +1,7 @@
 /*
 Package geom provides 2D geometric primitives.
 
-## Points, vectors, and dimensions
+# Points, vectors, and dimensions
 
 The structure of this package is a little bit strange in that it does
 not try to capture all 2D points in the singular concept of a vector,
@@ -15,7 +15,7 @@ but treats points, vectors, and dimensions separately:
 This approach provides some type-safety at the cost of more verbose
 computational expressions.
 
-## Curves
+# Curves
 
 A [Curve] is a parametric 2D space curve defined over the closed interval
 [0, 1].
