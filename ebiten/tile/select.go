@@ -31,7 +31,12 @@ func (s Sheet) TileHeight() int {
 
 // Select returns a subset of the Sheet's underlying image corresponding to the
 // provided tile index.
+//
+// Returns nil if tile is [Empty].
 func (s Sheet) Select(tile Index) *ebiten.Image {
-	p := image.Point{tile.Col * s.tileWidth, tile.Row * s.tileHeight}
+	if tile.Empty() {
+		return nil
+	}
+	p := image.Point{tile.Col() * s.tileWidth, tile.Row() * s.tileHeight}
 	return s.image.SubImage(image.Rect(p.X, p.Y, p.X+s.tileWidth, p.Y+s.tileHeight)).(*ebiten.Image)
 }
