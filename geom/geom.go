@@ -215,6 +215,52 @@ func (a AABB) Intersects(b AABB) bool {
 	return !(a.Max.X < b.Min.X || a.Min.X > b.Max.X || a.Max.Y < b.Min.Y || a.Min.Y > b.Max.Y)
 }
 
+// Separation returns a vector that represents the minimum separation between a and b.
+// If they intersect, then Separation returns the minimum translation vector and false.
+// Otherwise, it returns true.
+func (a AABB) Separation(b AABB) (Vector, bool) {
+	dx := min(a.Max.X, b.Max.X) - max(a.Min.X, b.Min.X)
+	dy := min(a.Max.Y, b.Max.Y) - max(a.Min.Y, b.Min.Y)
+	sep := dx <= 0 || dy <= 0
+	if dx < 0 {
+		if a.Max.X < b.Min.X {
+			dx = -dx
+		}
+	} else if mx := min(a.Dx(), b.Dx()); dx == mx {
+		lx := math.Abs(a.Min.X - b.Min.X)
+		rx := math.Abs(a.Max.X - b.Max.X)
+		if lx < rx {
+			dx = -dx - lx
+		} else {
+			dx += rx
+		}
+	} else if a.Min.X < b.Min.X {
+		dx = -dx
+	}
+	if dy < 0 {
+		if a.Max.Y < b.Min.Y {
+			dy = -dy
+		}
+	} else if my := min(a.Dy(), b.Dy()); dy == my {
+		ly := math.Abs(a.Min.Y - b.Min.Y)
+		ry := math.Abs(a.Max.Y - b.Max.Y)
+		if ly < ry {
+			dy = -dy - ly
+		} else {
+			dy += ry
+		}
+	} else if a.Min.Y < b.Min.Y {
+		dy = -dy
+	}
+	if sep {
+		return Vector{X: dx, Y: dy}, true
+	}
+	if math.Abs(dx) < math.Abs(dy) {
+		return Vector{X: dx, Y: 0}, false
+	}
+	return Vector{X: 0, Y: dy}, false
+}
+
 // Rad converts degrees to radians.
 func Rad(degrees float64) float64 {
 	return degrees * math.Pi / 180
