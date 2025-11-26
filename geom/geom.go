@@ -1,6 +1,7 @@
 package geom
 
 import (
+	"fmt"
 	"image"
 	"math"
 )
@@ -48,6 +49,8 @@ func ImagePoint(pt image.Point) Point {
 
 // Segment represents a line segment between two points.
 //
+// If both points are identical, then Segment represents a single point.
+//
 // Segment implements Curve.
 type Segment struct {
 	Start, End Point
@@ -62,6 +65,97 @@ func Seg(a, b Point) Segment {
 // from 0 to 1.
 func (s Segment) At(t float64) Point {
 	return Point{s.Start.X + t*(s.End.X-s.Start.X), s.Start.Y + t*(s.End.Y-s.Start.Y)}
+}
+
+// Length returns the length of the segment.
+func (s Segment) Length() float64 {
+	if s.Start == s.End {
+		return 0
+	}
+	return Vec(s.Start, s.End).Length()
+}
+
+// ZeroLength return trues if the segment has zero length.
+func (s Segment) ZeroLength() bool {
+	return s.Start == s.End
+}
+
+// Intersection returns a segment representing the intersection, and whether a segment
+// exists at all. If the two segments intersect at only one point, then Segment contains
+// that point as both the Start and End. That is, the length is zero.
+func (s0 Segment) Intersection(s1 Segment) (Segment, bool) {
+	// Credit to Victor Lecomte for this implementation.
+	// Taken from https://github.com/vlecomte/cp-geo.
+	properIntersection := func(s0, s1 Segment) (Point, bool) {
+		a := s0.Start
+		b := s0.End
+		c := s1.Start
+		d := s1.End
+		oa := orient(c, d, a)
+		ob := orient(c, d, b)
+		oc := orient(a, b, c)
+		od := orient(a, b, d)
+
+		// Proper intersection exists iff we have opposite signs.
+		if oa*ob < 0 && oc*od < 0 {
+			return (a.Vector().Scale(ob).Sub(b.Vector().Scale(oa))).Scale(1.0 / (ob - oa)).Point(Origin), true
+		}
+		return Point{}, false
+	}
+	if p, ok := properIntersection(s0, s1); ok {
+		return Seg(p, p), true
+	}
+
+	// Check endpoints and colinearity (geometry sucks).
+	if s1.Contains(s0.Start) {
+		if s1.Contains(s0.End) {
+			return Seg(s0.Start, s0.End), true
+		}
+		if s0.Contains(s1.Start) {
+			return Seg(s0.Start, s1.Start), true
+		}
+		return Seg(s0.Start, s0.Start), true
+	} else if s1.Contains(s0.End) {
+		if s0.Contains(s1.Start) {
+			return Seg(s1.Start, s0.End), true
+		}
+		return Seg(s0.End, s0.End), true
+	}
+	if s0.Contains(s1.Start) {
+		if s0.Contains(s1.End) {
+			return Seg(s1.Start, s1.End), true
+		}
+		if s1.Contains(s0.Start) {
+			return Seg(s1.Start, s0.Start), true
+		}
+		return Seg(s1.Start, s1.Start), true
+	} else if s0.Contains(s1.End) {
+		if s1.Contains(s0.Start) {
+			return Seg(s0.Start, s1.End), true
+		}
+		return Seg(s1.End, s1.End), true
+	}
+	return Segment{}, false
+}
+
+// Contains returns true if point p lies on segment s.
+func (s Segment) Contains(p Point) bool {
+	return orient(s.Start, s.End, p) == 0 &&
+		inDisk(s.Start, s.End, p)
+}
+
+func orient(a, b, c Point) float64 {
+	return crossMag(Vec(a, b), Vec(a, c))
+}
+
+// crossMag returns the magnitude of the cross product of two vectors.
+func crossMag(a, b Vector) float64 {
+	return a.X*b.Y - a.Y*b.X
+}
+
+// inDisk returns whether p is inside a disk with diameter ab.
+func inDisk(a, b, p Point) bool {
+	return Vec(p, a).Dot(Vec(p, b)) <= 0
 }
 
 // Line represents an infinite line of the form y=mx+b where m is the slope
@@ -87,6 +181,8 @@ func (l0 Line) Intercept(l1 Line) (Point, bool) {
 	return Point{(l0.B - l1.B) * r, (l1.M*l0.B - l0.M*l1.B) * r}, true
 }
 
+var Zero = Vector{0, 0}
+
 // Vector is a two-dimensional vector.
 type Vector struct {
 	X, Y float64
@@ -98,13 +194,24 @@ func Vec(origin, p Point) Vector {
 	return Vector{v.X, v.Y}
 }
 
+// Add adds vectors v0 and v1 together.
 func (v0 Vector) Add(v1 Vector) Vector {
 	return Vector{v0.X + v1.X, v0.Y + v1.Y}
+}
+
+// Sub subtracts vector v1 from vector v0.
+func (v0 Vector) Sub(v1 Vector) Vector {
+	return Vector{v0.X - v1.X, v0.Y - v1.Y}
 }
 
 // Dot computes the dot product of two vectors.
 func (v0 Vector) Dot(v1 Vector) float64 {
 	return v0.X*v1.X + v0.Y*v1.Y
+}
+
+// Neg negates the vector.
+func (v Vector) Neg() Vector {
+	return Vector{-v.X, -v.Y}
 }
 
 // Scale scales the vector by a.
@@ -133,6 +240,20 @@ func (v Vector) Normalize() Vector {
 	return Vector{v.X / l, v.Y / l}
 }
 
+// ReflectX reflects the vector over the X axis.
+func (v Vector) ReflectX() Vector {
+	out := Vector{X: -v.X, Y: v.Y}
+	fmt.Println("reflectX", v, out)
+	return out
+}
+
+// ReflectY reflects the vector over the Y axis.
+func (v Vector) ReflectY() Vector {
+	out := Vector{X: v.X, Y: -v.Y}
+	fmt.Println("reflectY", v, out)
+	return out
+}
+
 // Rotate rotates the vector about the origin by rad radians.
 func (v Vector) Rotate(rad float64) Vector {
 	cos := math.Cos(rad)
@@ -146,6 +267,11 @@ func (v Vector) Rotate(rad float64) Vector {
 // RightNormal computes the right-normal vector of this vector.
 func (v Vector) RightNormal() Vector {
 	return Vector{v.Y, -v.X}
+}
+
+// ProjectOnto projects vector a onto vector b.
+func (a Vector) ProjectOnto(b Vector) Vector {
+	return b.Scale(a.Dot(b) / b.Dot(b))
 }
 
 // Dimensions is an abstract width and height without a location.
@@ -212,53 +338,37 @@ func (a AABB) Translate(v Vector) AABB {
 
 // Intersects returns true if the two AABBs intersect.
 func (a AABB) Intersects(b AABB) bool {
-	return !(a.Max.X < b.Min.X || a.Min.X > b.Max.X || a.Max.Y < b.Min.Y || a.Min.Y > b.Max.Y)
+	return !(a.Max.X <= b.Min.X || a.Min.X >= b.Max.X || a.Max.Y <= b.Min.Y || a.Min.Y >= b.Max.Y)
 }
 
-// Separation returns a vector that represents the minimum separation between a and b.
-// If they intersect, then Separation returns the minimum translation vector and false.
-// Otherwise, it returns true.
-func (a AABB) Separation(b AABB) (Vector, bool) {
-	dx := min(a.Max.X, b.Max.X) - max(a.Min.X, b.Min.X)
-	dy := min(a.Max.Y, b.Max.Y) - max(a.Min.Y, b.Min.Y)
-	sep := dx <= 0 || dy <= 0
-	if dx < 0 {
-		if a.Max.X < b.Min.X {
-			dx = -dx
-		}
-	} else if mx := min(a.Dx(), b.Dx()); dx == mx {
-		lx := math.Abs(a.Min.X - b.Min.X)
-		rx := math.Abs(a.Max.X - b.Max.X)
-		if lx < rx {
-			dx = -dx - lx
-		} else {
-			dx += rx
-		}
-	} else if a.Min.X < b.Min.X {
-		dx = -dx
+// Penetration returns a vector representing the degree and direction of penetration
+// of a to b. Returns the zero vector if the two do not intersect.
+func (a AABB) Penetration(b AABB) Vector {
+	if !a.Intersects(b) {
+		return Zero
 	}
-	if dy < 0 {
-		if a.Max.Y < b.Min.Y {
-			dy = -dy
-		}
-	} else if my := min(a.Dy(), b.Dy()); dy == my {
-		ly := math.Abs(a.Min.Y - b.Min.Y)
-		ry := math.Abs(a.Max.Y - b.Max.Y)
-		if ly < ry {
-			dy = -dy - ly
-		} else {
-			dy += ry
-		}
-	} else if a.Min.Y < b.Min.Y {
-		dy = -dy
+	md := b.MinkowskiDiff(a)
+	p := Vector{X: md.Min.X}
+	d := math.Abs(md.Min.X)
+	if d0 := math.Abs(md.Max.X); d0 < d {
+		d = d0
+		p = Vector{X: md.Max.X}
 	}
-	if sep {
-		return Vector{X: dx, Y: dy}, true
+	if d0 := math.Abs(md.Min.Y); d0 < d {
+		d = d0
+		p = Vector{Y: md.Min.Y}
 	}
-	if math.Abs(dx) < math.Abs(dy) {
-		return Vector{X: dx, Y: 0}, false
+	if d0 := math.Abs(md.Max.Y); d0 < d {
+		d = d0
+		p = Vector{Y: md.Max.Y}
 	}
-	return Vector{X: 0, Y: dy}, false
+	return p
+}
+
+// MinkowskiDiff returns the Minkowski difference of the two AABBs,
+// which conveniently is another AABB.
+func (a AABB) MinkowskiDiff(b AABB) AABB {
+	return Dim(a.Dx()+b.Dx(), a.Dy()+b.Dy()).AABB(Pt(a.Min.X-b.Max.X, a.Min.Y-b.Max.Y))
 }
 
 // Rad converts degrees to radians.
