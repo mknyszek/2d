@@ -36,7 +36,7 @@ func Anim(tiles ...Index) Animation {
 // at each frame.
 // [Sprite.Image] returns the image for the current frame.
 type Sprite struct {
-	anim.Player[Animation, Index]
+	anim.Player[Index]
 	Sheet
 }
 
