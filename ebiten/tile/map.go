@@ -57,3 +57,8 @@ func (m *Map) Render(s Sheet) iter.Seq2[geom.Vector, *ebiten.Image] {
 		}
 	}
 }
+
+// Size returns the dimensions of the map given a sheet.
+func (m *Map) Size(s Sheet) geom.Dimensions {
+	return geom.Dim(float64(s.TileWidth()*m.Cols), float64(s.TileHeight()*m.Rows))
+}
