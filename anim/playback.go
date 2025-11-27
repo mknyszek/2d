@@ -18,8 +18,8 @@ type Playable[T any] interface {
 //
 // Really, it is a pull iterator that produces values from a
 // finite sequence.
-type Player[A Playable[T], T any] struct {
-	anim  A
+type Player[T any] struct {
+	anim  Playable[T]
 	frame int
 	loop  bool
 	done  bool
@@ -29,7 +29,7 @@ type Player[A Playable[T], T any] struct {
 // will play through once, then stop.
 //
 // This immediately overrides any current animation playing.
-func (p *Player[A, T]) Start(anim A) {
+func (p *Player[T]) Start(anim Playable[T]) {
 	p.anim = anim
 	p.frame = 0
 	p.loop = false
@@ -39,20 +39,20 @@ func (p *Player[A, T]) Start(anim A) {
 // will loop forever.
 //
 // This immediately overrides any current animation playing.
-func (p *Player[A, T]) Loop(anim A) {
+func (p *Player[T]) Loop(anim Playable[T]) {
 	p.Start(anim)
 	p.loop = true
 }
 
 // Current returns the value of the current frame in the animation.
-func (p *Player[A, T]) Current() T {
+func (p *Player[T]) Current() T {
 	return p.anim.At(p.frame)
 }
 
 // Next advances the animation.
 //
 // Returns true if the animation has completed.
-func (p *Player[A, T]) Next() bool {
+func (p *Player[T]) Next() bool {
 	if p.Done() {
 		return true
 	}
@@ -70,7 +70,7 @@ func (p *Player[A, T]) Next() bool {
 }
 
 // Done returns true if the animation has completed.
-func (p *Player[A, T]) Done() bool {
+func (p *Player[T]) Done() bool {
 	return p.done
 }
 
@@ -126,6 +126,9 @@ func (p PingPonged[A, T]) Len() int {
 //
 // That is, Next will advance through multiples of the same frame
 // before advancing to the next one.
+//
+// A delay of 0 represents no change. A delay of 1 is a doubling of
+// every frame (half the frame rate).
 func Delay[A Playable[T], T any](anim A, delay int) Delayed[A, T] {
 	return Delayed[A, T]{anim: anim, delay: delay}
 }
@@ -139,10 +142,10 @@ type Delayed[A Playable[T], T any] struct {
 
 // At implements Playable.
 func (d Delayed[A, T]) At(i int) T {
-	return d.anim.At(i / d.delay)
+	return d.anim.At(i / (d.delay + 1))
 }
 
 // Len implements Playable.
 func (d Delayed[A, T]) Len() int {
-	return d.anim.Len() * d.delay
+	return d.anim.Len() * (d.delay + 1)
 }
