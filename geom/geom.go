@@ -331,6 +331,10 @@ func (a AABB) Dim() Dimensions {
 	return Dim(a.Dx(), a.Dy())
 }
 
+func (a AABB) Center() Point {
+	return a.Min.Add(Vector{a.Dx() / 2, a.Dy() / 2})
+}
+
 // Translate moves the AABB in the direction of the provided vector.
 func (a AABB) Translate(v Vector) AABB {
 	return AABB{a.Min.Add(v), a.Max.Add(v)}
