@@ -335,6 +335,11 @@ func (a AABB) Center() Point {
 	return a.Min.Add(Vector{a.Dx() / 2, a.Dy() / 2})
 }
 
+// MoveTo sets the AABB's minimum point to the given point, updating the maximum accordingly.
+func (a AABB) MoveTo(p Point) AABB {
+	return AABB{p, p.Add(a.Dim().Vector())}
+}
+
 // Translate moves the AABB in the direction of the provided vector.
 func (a AABB) Translate(v Vector) AABB {
 	return AABB{a.Min.Add(v), a.Max.Add(v)}
