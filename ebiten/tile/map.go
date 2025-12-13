@@ -6,34 +6,31 @@ import (
 
 	"github.com/hajimehoshi/ebiten/v2"
 	"github.com/mknyszek/2d/geom"
+	"github.com/mknyszek/2d/grid"
 )
 
 // Map is a 2D grid of tile indices.
 //
 // Map will always consist of simple data types that are serializable
 // by most encoding packages, like JSON.
-type Map struct {
-	Tiles []Index
-	Rows  int
-	Cols  int
-}
+type Map grid.Dense[Index]
 
 // NewMap returns a new tile map sized according to rows and cols.
 func NewMap(rows, cols int) *Map {
-	return &Map{Rows: rows, Cols: cols, Tiles: make([]Index, rows*cols)}
+	return (*Map)(grid.New[Index](rows, cols))
 }
 
 // At returns the [Index] at the provided row and column in the tile map.
-func (m *Map) At(row, col int) Index {
-	if row < 0 || col < 0 || row >= m.Rows || col >= m.Cols {
+func (m *Map) At(idx grid.Index) Index {
+	if idx.Row < 0 || idx.Col < 0 || idx.Row >= m.Rows || idx.Col >= m.Cols {
 		return Empty
 	}
-	return m.Tiles[row*m.Cols+col]
+	return (*grid.Dense[Index])(m).At(idx)
 }
 
 // Set mutates the Index at the provided row and column.
-func (m *Map) Set(row, col int, i Index) {
-	m.Tiles[row*m.Cols+col] = i
+func (m *Map) Set(idx grid.Index, i Index) {
+	(*grid.Dense[Index])(m).Set(idx, i)
 }
 
 // Render returns an iterator that produces the relative coordinate
@@ -43,7 +40,7 @@ func (m *Map) Render(s Sheet) iter.Seq2[geom.Vector, *ebiten.Image] {
 	return func(yield func(geom.Vector, *ebiten.Image) bool) {
 		pt := image.Pt(0, 0)
 		w := s.TileWidth() * m.Cols
-		for _, idx := range m.Tiles {
+		for _, idx := range m.Data {
 			if !idx.Empty() {
 				if !yield(geom.ImagePoint(pt).Vector(), s.Select(idx)) {
 					return
