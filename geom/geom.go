@@ -380,6 +380,26 @@ func (a AABB) MinkowskiDiff(b AABB) AABB {
 	return Dim(a.Dx()+b.Dx(), a.Dy()+b.Dy()).AABB(Pt(a.Min.X-b.Max.X, a.Min.Y-b.Max.Y))
 }
 
+// Left returns the left edge of the AABB.
+func (a AABB) Left() Segment {
+	return Seg(a.Min, Pt(a.Min.X, a.Max.Y))
+}
+
+// Top returns the top edge of the AABB.
+func (a AABB) Top() Segment {
+	return Seg(a.Min, Pt(a.Max.X, a.Min.Y))
+}
+
+// Right returns the right edge of the AABB.
+func (a AABB) Right() Segment {
+	return Seg(Pt(a.Max.X, a.Min.Y), a.Max)
+}
+
+// Bottom returns the bottom edge of the AABB.
+func (a AABB) Bottom() Segment {
+	return Seg(Pt(a.Min.X, a.Max.Y), a.Max)
+}
+
 // Rad converts degrees to radians.
 func Rad(degrees float64) float64 {
 	return degrees * math.Pi / 180
