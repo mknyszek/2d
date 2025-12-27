@@ -29,6 +29,11 @@ func (s Sheet) TileHeight() int {
 	return s.tileHeight
 }
 
+// Image returns the tile sheet image.
+func (s Sheet) Image() *ebiten.Image {
+	return s.image
+}
+
 // Select returns a subset of the Sheet's underlying image corresponding to the
 // provided tile index.
 //
